@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Threads集客のリーチ編 第3弾</title>
+</head>
+<body>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
+<style>
+/* layout: 紙面風の1カラム記事。上に固定ヘッダー(進捗バー付き)、右から目次ドロワー。2〜3行ごとの塊で余白を取る */
+:root{
+  color-scheme:light;
+  --bg:#ffffff; --paper:#ffffff; --fg:#1b2230; --muted:#5a6475; --line:#e3e7ee;
+  --tint:#f4f7fb; --accent:#1c4fc4; --mk:rgba(255,224,0,.7); --ul:#1b2230;
+  --red:#d42a3c; --bgh:#e3edff; --bgh-fg:#123a8f;
+  --hdr:rgba(255,255,255,.96); --shadow:0 8px 28px rgba(20,30,60,.16);
+  --fs:16.5px; --hh:56px;
+  --f-display:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-body:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:var(--fs);line-height:1.9;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--hdr)}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--hdr);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top-in{display:flex;align-items:center;gap:6px;max-width:720px;margin:0 auto;height:var(--hh);padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}
+.tbtn{flex:none;min-width:40px;height:40px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper);font-family:var(--f-display);font-weight:700;font-size:.82rem;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.tbtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.now{flex:1;min-width:0;line-height:1.3;padding:0 4px}
+.now b{display:block;font-family:var(--f-display);font-weight:800;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now small{display:block;font-size:.68rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{position:absolute;left:0;right:0;bottom:-1px;height:3px;background:transparent}
+.bar i{display:block;height:100%;background:var(--accent);transform-origin:0 50%;transform:scaleX(0)}
+
+/* hero */
+.hero{background:#fff;color:var(--fg);border-bottom:1px solid var(--line)}
+.hero-in{max-width:720px;margin:0 auto;padding-block:40px 30px;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+.hero .eb{font-family:var(--f-display);font-weight:700;font-size:.78rem;letter-spacing:.16em;color:var(--accent)}
+.hero h1{font-family:var(--f-display);font-weight:900;font-size:clamp(1.65rem,7vw,2.5rem);line-height:1.4;margin:.6em 0 .7em;text-wrap:balance}
+.hero h1 em{font-style:normal;background:linear-gradient(transparent 58%,var(--mk) 58%)}
+.hero .lead{margin:0 0 1.2em;font-size:.92rem;line-height:1.85;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 26px;padding:0;list-style:none}
+.meta li{font-size:.74rem;padding:3px 10px;border:1px solid var(--line);background:var(--tint);border-radius:99px}
+.keys-l{font-family:var(--f-display);font-weight:700;font-size:.8rem;margin:0 0 8px}
+.keys{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.key{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 10px 11px;background:var(--tint);border:1px solid var(--line);border-radius:6px;color:var(--fg)}
+.key small{font-size:.68rem;color:var(--accent);font-family:var(--f-display);font-weight:700;letter-spacing:.08em}
+.key b{font-family:var(--f-display);font-weight:900;font-size:1.05rem;line-height:1.3}
+.key span{font-size:.7rem;line-height:1.5;color:var(--muted)}
+
+/* paper */
+.paper{max-width:720px;margin:0 auto;background:var(--paper);padding-block:8px 40px;padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+@media (min-width:760px){.paper{border-inline:1px solid var(--line)}}
+.toc{padding-top:34px}
+.toc h2{font-family:var(--f-display);font-weight:900;font-size:1.2rem;margin:0 0 .6em}
+.toc ol{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.toc li button{display:flex;gap:12px;align-items:baseline;width:100%;text-align:left;padding:11px 2px;background:none;border:0;border-bottom:1px solid var(--line);min-height:44px}
+.tn{font-family:var(--f-display);font-weight:900;color:var(--accent);font-size:.9rem;font-variant-numeric:tabular-nums}
+.tt{font-weight:500;font-size:.93rem;line-height:1.6}
+.toc li button:hover .tt{text-decoration:underline}
+
+.chap{padding-top:3.4rem;scroll-margin-top:calc(var(--hh) + env(safe-area-inset-top,0px) + 6px)}
+.chead{margin-bottom:1.6em;padding-bottom:.9em;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--f-display);font-weight:700;font-size:.74rem;letter-spacing:.2em;color:var(--accent)}
+.chap h2{font-family:var(--f-display);font-weight:900;font-size:calc(var(--fs)*1.5);line-height:1.45;margin:.25em 0 0;text-wrap:balance}
+.chap h3{font-family:var(--f-display);font-weight:800;font-size:calc(var(--fs)*1.16);line-height:1.55;margin:2.8em 0 1em;text-wrap:balance;scroll-margin-top:calc(var(--hh) + env(safe-area-inset-top,0px) + 6px)}
+.chap h3::before{content:"▶ ";color:var(--accent);font-size:.8em}
+.chap p{margin:0 0 1.55em;line-height:2.05;letter-spacing:.02em;overflow-wrap:anywhere}
+
+/* emphasis */
+.mk{color:inherit;font-weight:700;background:linear-gradient(transparent 56%,var(--mk) 56%) no-repeat 0 0/100% 100%;transition:background-size .9s ease;-webkit-box-decoration-break:clone;box-decoration-break:clone;padding:0 .08em}
+.mk.pend{background-size:0% 100%}
+.ul{text-decoration:underline;text-decoration-color:var(--ul);text-decoration-thickness:2px;text-underline-offset:.28em;font-weight:500}
+.rd{color:var(--red);font-weight:700}
+.bg{background:var(--bgh);color:var(--bgh-fg);font-weight:700;padding:.02em .4em;border-radius:3px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+
+.chap p.big{font-family:var(--f-display);font-weight:900;font-size:calc(var(--fs)*1.3);line-height:1.6;margin:2.2em 0;padding:.95em 0 .85em;border-top:3px solid var(--accent);border-bottom:1px solid var(--line);text-wrap:balance;letter-spacing:.01em}
+.callout{margin:1.9em 0;padding:1em 1.1em .5em;background:var(--tint);border:1px solid var(--line);border-radius:6px}
+.callout p{margin:0 0 .9em !important;font-size:.96em;line-height:1.9 !important}
+.co-label{font-family:var(--f-display);font-weight:800;color:var(--accent);margin-bottom:.5em}
+.cards{display:grid;gap:10px;margin:1.7em 0}
+.card{display:flex;gap:14px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--paper)}
+.cnum{flex:none;min-width:3rem;text-align:center;font-family:var(--f-display);font-weight:900;font-size:1.7rem;line-height:1;color:var(--accent)}
+.cnum.s{font-size:.95rem;line-height:1.3}
+.card div{display:flex;flex-direction:column;min-width:0;line-height:1.55}
+.card b{font-family:var(--f-display);font-weight:800;font-size:1.02em}
+.card span:not(.cnum){font-size:.84em;color:var(--muted);line-height:1.7}
+.flow{list-style:none;margin:1.9em 0;padding:0}
+.flow li{position:relative;padding:.75em 1em;background:var(--tint);border:1px solid var(--line);border-radius:6px;font-size:.95em;line-height:1.7}
+.flow li+li{margin-top:28px}
+.flow li+li::before{content:"▼";position:absolute;left:1.1em;top:-24px;color:var(--accent);font-size:.8em}
+.tbl{overflow-x:auto;margin:1.9em 0;border:1px solid var(--line);border-radius:6px}
+.tbl table{border-collapse:collapse;width:100%;min-width:430px;font-size:.88em;line-height:1.6}
+.tbl th{background:var(--tint);text-align:left;font-family:var(--f-display);font-weight:800;color:var(--accent)}
+.tbl th,.tbl td{padding:.7em .9em;border-bottom:1px solid var(--line)}
+.tbl tr:last-child td{border-bottom:0}
+.next{display:flex;flex-direction:column;gap:2px;width:100%;margin-top:3rem;padding:.9em 1.1em;text-align:left;background:var(--tint);border:1px solid var(--line);border-radius:6px}
+.next span{font-size:.74rem;color:var(--accent);font-family:var(--f-display);font-weight:700;letter-spacing:.06em}
+.next b{font-family:var(--f-display);font-weight:800;line-height:1.5}
+.end{margin-top:3.6rem;padding-top:1.4rem;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px}
+.end .tbtn{height:44px;padding:0 16px}
+
+/* drawer */
+.ov{position:fixed;inset:0;z-index:40;background:rgba(5,10,25,.5);opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
+.ov.on{opacity:1;visibility:visible}
+.drawer{position:fixed;top:0;bottom:0;right:0;z-index:50;width:min(88vw,380px);background:var(--paper);border-left:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(102%);visibility:hidden;transition:transform .28s ease,visibility .28s;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.drawer.on{transform:none;visibility:visible}
+.d-head{display:flex;align-items:center;justify-content:space-between;padding:12px 8px 10px 18px;border-bottom:1px solid var(--line)}
+.d-head b{font-family:var(--f-display);font-weight:900;font-size:1.05rem}
+.d-body{overflow-y:auto;flex:1;padding:6px max(12px,env(safe-area-inset-right,0px)) 24px 12px;overscroll-behavior:contain}
+.d-body ul{list-style:none;margin:0;padding:0}
+.chb{display:flex;gap:10px;align-items:baseline;width:100%;text-align:left;padding:10px 8px;background:none;border:0;border-radius:6px;min-height:44px}
+.chb .tt{font-weight:700;font-size:.9rem}
+.subs{margin:0 0 6px 34px !important;border-left:1px solid var(--line)}
+.sub{display:block;width:100%;text-align:left;padding:6px 10px;background:none;border:0;font-size:.8rem;color:var(--muted);line-height:1.5;min-height:34px}
+li.active>.chb{background:var(--bgh);color:var(--bgh-fg)}
+li.active>.chb .tn{color:inherit}
+
+/* floating */
+.fab{position:fixed;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:25;width:46px;height:46px;border-radius:50%;border:1px solid var(--line);background:var(--paper);box-shadow:var(--shadow);display:grid;place-items:center;opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .25s,transform .25s,visibility .25s}
+.fab.on{opacity:1;visibility:visible;transform:none}
+.fab svg{width:20px;height:20px;fill:none;stroke:var(--fg);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.resume{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:35;width:min(calc(100vw - 32px),420px);transform:translate(-50%,20px);opacity:0;visibility:hidden;transition:opacity .3s,transform .3s,visibility .3s;background:var(--paper);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;box-shadow:var(--shadow);font-size:.85rem;line-height:1.6}
+.resume.on{opacity:1;visibility:visible;transform:translate(-50%,0)}
+.resume p{margin:0 0 8px}
+.resume div{display:flex;gap:8px}
+.resume button{flex:1;min-height:40px;border-radius:6px;border:1px solid var(--line);background:var(--paper);font-weight:700;font-size:.82rem}
+.resume button.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important}.mk{transition:none}}
+</style>
+
+<header class="top" id="top">
+  <div class="top-in">
+    <button class="tbtn" type="button" id="openToc" aria-label="目次を開く"><svg viewBox="0 0 20 20"><path d="M3 5h14M3 10h14M3 15h14"/></svg>目次</button>
+    <div class="now"><b id="nowTitle">Threads集客のリーチ編 第3弾</b><small id="nowSub">約22分で読めます</small></div>
+    <button class="tbtn" type="button" id="fsDown" aria-label="文字を小さくする">A−</button>
+    <button class="tbtn" type="button" id="fsUp" aria-label="文字を大きくする">A＋</button>
+  </div>
+  <div class="bar"><i id="barFill"></i></div>
+</header>
+
+<section class="hero">
+  <div class="hero-in">
+    <div class="eb">コンテンツ販売の基礎 ＜集客編＞</div>
+    <h1>Threadsで<em>認知</em>を増やす<br>バズらない時の対策編</h1>
+    <p class="lead">リーチの増やし方 第3弾。投稿しているのに伸びない時の原因を、初心者編7つ、上級者編4つに分けて解説します。</p>
+    <ul class="meta"><li>約22分で読めます</li><li>全21章</li><li>スマホで読みやすい記事形式</li></ul>
+    <p class="keys-l">▼ この記事のポイント（タップでその章へ）</p>
+    <div class="keys">
+      <button class="key" type="button" data-go="c3"><small>1</small><b>友達言葉</b><span>伸びる文章の型</span></button>
+      <button class="key" type="button" data-go="c5"><small>2</small><b>メディア投稿</b><span>伸びない7つの原因</span></button>
+      <button class="key" type="button" data-go="c15"><small>3</small><b>縦長の投稿</b><span>改行が逆効果な理由</span></button>
+      <button class="key" type="button" data-go="c17"><small>4</small><b>上級者編</b><span>規制と競合の4原因</span></button>
+    </div>
+  </div>
+  </section>
+
+<main class="paper" id="paper">
+  <nav class="toc" id="toc" aria-label="目次">
+    <h2>【目次】</h2>
+    <ol>
+<li><button type="button" data-go="c1"><span class="tn">01</span><span class="tt">はじめに　第3弾はバズらない時の対策編</span></button></li>
+<li><button type="button" data-go="c2"><span class="tn">02</span><span class="tt">原因は初心者編7つと上級者編4つ</span></button></li>
+<li><button type="button" data-go="c3"><span class="tn">03</span><span class="tt">初心者編①　丁寧語が多すぎる教科書レベルの興味づけ</span></button></li>
+<li><button type="button" data-go="c4"><span class="tn">04</span><span class="tt">名詞的語尾×丁寧語×友達言葉の3点セット</span></button></li>
+<li><button type="button" data-go="c5"><span class="tn">05</span><span class="tt">初心者編②　メディア投稿が雑</span></button></li>
+<li><button type="button" data-go="c6"><span class="tn">06</span><span class="tt">メディアA　AI感丸出しのフォントとデザイン</span></button></li>
+<li><button type="button" data-go="c7"><span class="tn">07</span><span class="tt">メディアB　画像の両端が見切れる</span></button></li>
+<li><button type="button" data-go="c8"><span class="tn">08</span><span class="tt">メディアC　色やデザインがバラバラ</span></button></li>
+<li><button type="button" data-go="c9"><span class="tn">09</span><span class="tt">メディアD　単純に需要が少ない</span></button></li>
+<li><button type="button" data-go="c10"><span class="tn">10</span><span class="tt">メディアE　解説と構成が難しい、役に立たない</span></button></li>
+<li><button type="button" data-go="c11"><span class="tn">11</span><span class="tt">メディアF・G　興味づけが弱い、タップの仕掛けが少ない</span></button></li>
+<li><button type="button" data-go="c12"><span class="tn">12</span><span class="tt">初心者編③　ベネフィットと損失回避が弱い</span></button></li>
+<li><button type="button" data-go="c13"><span class="tn">13</span><span class="tt">初心者編④　テーマがバラバラ</span></button></li>
+<li><button type="button" data-go="c14"><span class="tn">14</span><span class="tt">初心者編⑤　1回試してやめている</span></button></li>
+<li><button type="button" data-go="c15"><span class="tn">15</span><span class="tt">初心者編⑥　文章がやたらと縦に長い</span></button></li>
+<li><button type="button" data-go="c16"><span class="tn">16</span><span class="tt">初心者編⑦　単純に読む価値がない</span></button></li>
+<li><button type="button" data-go="c17"><span class="tn">17</span><span class="tt">上級者編①　Threads上の規制がかかる</span></button></li>
+<li><button type="button" data-go="c18"><span class="tn">18</span><span class="tt">上級者編②　内容が高度になりすぎる</span></button></li>
+<li><button type="button" data-go="c19"><span class="tn">19</span><span class="tt">上級者編③　競合や真似するアカウントが増える</span></button></li>
+<li><button type="button" data-go="c20"><span class="tn">20</span><span class="tt">上級者編④　初速を作るコアファンが減る</span></button></li>
+<li><button type="button" data-go="c21"><span class="tn">21</span><span class="tt">まとめ　改善を伴った継続</span></button></li>
+    </ol>
+  </nav>
+
+<section class="chap" id="c1" data-title="はじめに　第3弾はバズらない時の対策編">
+<header class="chead"><span class="eyebrow">CHAPTER 01</span><h2>はじめに　第3弾はバズらない時の対策編</h2></header>
+<p>Threadsで認知を増やすリーチの増やし方、第3弾です。今回は、バズらない時の対策編についてお話しします。</p>
+<p>認知を増やす投稿をしているのに、全くバズらない。インプレッションが増えない。そんな時ってありますよね。</p>
+<p>第1弾と第2弾で、バズる法則性をたくさんお伝えしてきました。</p>
+<p>これらの応用を繰り返せば、Threads上でバズったり、数万人に届けたりするのは、そこまで難しくありません。</p>
+<p>ただ、それでもうまくいかないと思えることが何度かあるはずです。</p>
+<p>その原因と対策を複数まとめたので、自分が当てはまっていないか、おさらいしながら見ていきましょう。</p>
+<button class="next" type="button" data-go="c2"><span>次の章 ▶</span><b>原因は初心者編7つと上級者編4つ</b></button>
+</section>
+<section class="chap" id="c2" data-title="原因は初心者編7つと上級者編4つ">
+<header class="chead"><span class="eyebrow">CHAPTER 02</span><h2>原因は初心者編7つと上級者編4つ</h2></header>
+<p>なぜ認知が増えないのか。</p>
+<p>この記事では徹底的に解説していきます。</p>
+<p>初心者が起こしやすい問題と、上級者が起こしやすい問題は別々にあります。両方の視点を持っておいてください。</p>
+<p class="big"><mark class="mk">初心者編は7つ</mark>、<mark class="mk">上級者編は4つ</mark>の原因</p>
+<aside class="callout"><div class="co-label">【初心者編の7つの原因】</div><p>①丁寧語が多すぎる教科書レベルの興味づけ</p><p>②メディア投稿が雑</p><p>③ベネフィットと損失回避が弱い</p><p>④テーマがバラバラ</p><p>⑤1回試してやめている</p><p>⑥文章が縦に長い</p><p>⑦単純に読む価値がない</p></aside>
+<aside class="callout"><div class="co-label">【上級者編の4つの原因】</div><p>①Threads上の規制がかかる</p><p>②内容が高度になりすぎる</p><p>③競合や真似するアカウントが増える</p><p>④初速を作るコアファンが減る</p></aside>
+<p>まずは初心者編から順番に見ていきましょう。</p>
+<button class="next" type="button" data-go="c3"><span>次の章 ▶</span><b>初心者編①　丁寧語が多すぎる教科書レベルの興味づけ</b></button>
+</section>
+<section class="chap" id="c3" data-title="初心者編①　丁寧語が多すぎる教科書レベルの興味づけ">
+<header class="chead"><span class="eyebrow">CHAPTER 03</span><h2>初心者編①　丁寧語が多すぎる教科書レベルの興味づけ</h2></header>
+<p>一つ目の原因は、丁寧語が多すぎる、教科書レベルの興味づけです。</p>
+<p>例えば、こんな投稿で悩んでいませんか。</p>
+<aside class="callout"><div class="co-label">【こんな文章は要注意】</div><p>もし、こんな風になっているなら○○が原因かもしれません</p><p>○○について参考程度に見てください</p><p>○○の可能性があるので、先を読み進めてください</p></aside>
+<p>こんな感じでやっている方、多いと思います。でも残念ながら、これらは興味づけになっていません。</p>
+<p class="big">当たり障りのない遠回しな丁寧語は、<b class="rd">誰も傷つけないけど、誰も見たいとは思わない</b></p>
+<p>なぜなら、余計な文字が多かったり、認知負荷によるストレスがあったり、前置きが長かったりして、本題に入るまでが遠いからです。</p>
+<p>読み進める側のストレスの方が大きいんですよね。</p>
+<p>だから考え方は、むしろ逆です。もっとカジュアルさを取り込んで、あえて人間ぽくしてみてください。</p>
+<h3 id="c3-1" data-sub="友達におすすめするスタイル">友達におすすめするスタイル</h3>
+<p>特にSNSでバズるためには、<mark class="mk">フォロワーを友人だと仮定して、おすすめ商品を紹介する文章スタイル</mark>を意識してみてください。</p>
+<p>サンプルを3つ出していきます。</p>
+<h3 id="c3-2" data-sub="サンプル1　化粧水のアフィリエイト">サンプル1　化粧水のアフィリエイト</h3>
+<p>まず、教科書レベルの興味づけの例です。</p>
+<aside class="callout"><div class="co-label">【伸びない例】</div><p>乾燥肌に悩んでいる方へ</p><p>もし夕方になると肌が突っ張るなら、保湿が足りていない可能性があります</p><p>そんな方にオススメの化粧品を紹介しますので、参考程度にご覧ください</p></aside>
+<p>こういった型は伸びません。インプレッションが全然増えません。友人にオススメするスタイルの口調にすると、こうなります。</p>
+<aside class="callout"><div class="co-label">【伸びる例】</div><p>ねえ聞いて、この化粧品に変えて2週間なんだけど、夕方の突っ張りが完全に消滅した</p><p>正直2000円台だから期待してなかったのに</p><p>ただ普通につけても効果ほぼないから、私がやり方解説する</p></aside>
+<h3 id="c3-3" data-sub="サンプル2　AIツールの紹介">サンプル2　AIツールの紹介</h3>
+<aside class="callout"><div class="co-label">【伸びない例】</div><p>資料作成に時間がかかっていませんか</p><p>もしかするとAIツールを活用できていないことが原因かもしれません</p><p>業務効率化に役立つツールをまとめましたので、最後までお読みください</p></aside>
+<p>これはあまり読まれません。友人にオススメするスタイルだと、こうなります。</p>
+<aside class="callout"><div class="co-label">【伸びる例】</div><p>昨日これで3時間かけて作ってたスライドが5分で終わったんだけど</p><p>普通に声出た、無料でここまでできるの</p><p>おかしい、やり方スクショで全部残しておいた</p></aside>
+<p>こっちの方が惹かれますよね。</p>
+<h3 id="c3-4" data-sub="サンプル3　ホテルの紹介">サンプル3　ホテルの紹介</h3>
+<aside class="callout"><div class="co-label">【伸びない例】</div><p>記念日の宿泊選びに迷っている方向け</p><p>今回はカップルにオススメのホテルを紹介します</p><p>旅行の参考になれば幸いです</p></aside>
+<aside class="callout"><div class="co-label">【伸びる例】</div><p>記念日のホテル、まだ決めてないならここだけは1回見てほしい</p><p>ペアに露天風呂ついてて、1人2万円切るのよ</p><p>ただ予約の取り方に癖があるから、普通に探すとこの値段は出てこない</p></aside>
+<p>これでイメージが大体湧いたと思います。</p>
+<p class="big">丁寧語は無駄が多く、読む側に<b class="rd">認知ストレス</b>が出る</p>
+<p>シンプルで余計な表現を大幅にカットし、何がいいのか分かる友達言葉の方が、伝わりやすいんですよね。</p>
+<button class="next" type="button" data-go="c4"><span>次の章 ▶</span><b>名詞的語尾×丁寧語×友達言葉の3点セット</b></button>
+</section>
+<section class="chap" id="c4" data-title="名詞的語尾×丁寧語×友達言葉の3点セット">
+<header class="chead"><span class="eyebrow">CHAPTER 04</span><h2>名詞的語尾×丁寧語×友達言葉の3点セット</h2></header>
+<p>「友達言葉なんて、私のブランディングには向いてない」「私の発信は常に丁寧語がいい」という方もいると思います。</p>
+<p>僕も、どちらかといえば丁寧語を入れたいタイプなので、気持ちはわかります。</p>
+<p>では、誠実で大人な表現を残しつつ、見たくなるような強烈な興味づけの投稿を作るには、どうすればいいのか。</p>
+<p>答えを言います。</p>
+<p class="big"><mark class="mk">名詞的語尾</mark>＋<mark class="mk">丁寧語</mark>＋<mark class="mk">友達言葉</mark>の組み合わせ</p>
+<p>この組み合わせが、最も自然で魅力的なライティングスタイルになります。</p>
+<h3 id="c4-1" data-sub="3つの役割">3つの役割</h3>
+<div class="cards"><div class="card"><span class="cnum">1</span><div><b>名詞的語尾</b><span>体言止めのこと。名詞で文を終わらせる書き方。</span></div></div><div class="card"><span class="cnum">2</span><div><b>丁寧語</b><span>ですます調。誠実さと信頼を残す土台。説明や事実を伝える時に役立つ。</span></div></div><div class="card"><span class="cnum">3</span><div><b>友達言葉</b><span>「普通に」「やばかった」「正直」「一瞬でできた」など。本音と人間性が最も滲む部分。</span></div></div></div>
+<h3 id="c4-2" data-sub="名詞的語尾">名詞的語尾</h3>
+<p>例えば「○○で完了」「○○が2万円以下」「徹底的に解説」のように、ですますをつけない書き方です。</p>
+<p>ですますが消える分、文字数が減ってテンポ感が出ます。しかも言い切りになるので、数字や結果を見せる場面では強い語尾になります。</p>
+<h3 id="c4-3" data-sub="丁寧語">丁寧語</h3>
+<p>普通のですます調です。</p>
+<p>誠実さと信頼を残すための土台の部分。説明や事実を伝える時に役立ちます。</p>
+<h3 id="c4-4" data-sub="友達言葉">友達言葉</h3>
+<p>さっき僕が言ったような、友達に伝えるような表現です。「普通に」「やばかった」「正直」「一瞬でできた」など。</p>
+<p>本音や人間性が最も滲む言葉が、ここになります。</p>
+<p>ポイントは、全部を崩さないことです。<mark class="mk">気持ちが動いた一箇所にだけ</mark>、友達言葉を混ぜてみてください。</p>
+<aside class="callout"><div class="co-label">【3つを組み合わせる理由】</div><p>丁寧語だけだと、教科書みたいになる</p><p>友達言葉だけだと、軽くなってしまう</p><p>名詞的語尾でスピード感を出して、丁寧語で品を保ち、友達言葉で体温を足す</p></aside>
+<h3 id="c4-5" data-sub="3つのサンプルを書き直すと">3つのサンプルを書き直すと</h3>
+<aside class="callout"><div class="co-label">【サンプル1　化粧水のアフィリエイト】</div><p>この化粧品に変えて2週間の効果</p><p>2000円台なので、正直全く期待してなかった</p><p>ただ普通につけるだけだと宝の持ち腐れなので、私が毎日やっているつけ方をまとめておきます</p></aside>
+<aside class="callout"><div class="co-label">【サンプル2　AIツール】</div><p>3時間かかっていたスライドが5分で完了</p><p>普通に声が出たけど、無料とは思えない</p><p>手順はスクショで全部残しました</p></aside>
+<aside class="callout"><div class="co-label">【サンプル3　ホテル紹介】</div><p>部屋に露天風呂付きで、1人2万円以下</p><p>ただ予約の取り方にクセがあるんですよ</p><p>普通に探してもこの値段は出てきません</p></aside>
+<p>これくらいなら、ウザくならずに、適度にカジュアルで誠実さも出ませんか。</p>
+<aside class="callout"><div class="co-label">【注意】</div><p>友達感やため口感を出しすぎると、高額な教材は売れづらくなります。バランスに注意してください。</p></aside>
+<button class="next" type="button" data-go="c5"><span>次の章 ▶</span><b>初心者編②　メディア投稿が雑</b></button>
+</section>
+<section class="chap" id="c5" data-title="初心者編②　メディア投稿が雑">
+<header class="chead"><span class="eyebrow">CHAPTER 05</span><h2>初心者編②　メディア投稿が雑</h2></header>
+<p>二つ目は、メディア投稿が雑という原因です。</p>
+<p>メディア投稿をしているのにインプが伸びないのは、どういうことなのか。特に画像の投稿に多いのですが、見直すべき点を挙げていきます。</p>
+<p>メインは7つです。</p>
+<div class="cards"><div class="card"><span class="cnum">A</span><div><b>AI感丸出しのフォントとデザイン</b><span>ChatGPTのデフォルトのまま、カラフルすぎる</span></div></div><div class="card"><span class="cnum">B</span><div><b>画像の両端が見切れて見づらい</b><span>上のタイトルが見えない、途中で消える</span></div></div><div class="card"><span class="cnum">C</span><div><b>色やデザインがバラバラ</b><span>1枚目と2枚目で雰囲気が違う</span></div></div><div class="card"><span class="cnum">D</span><div><b>需要が少ない画像や動画を作っている</b><span>テーマ選びの問題</span></div></div><div class="card"><span class="cnum">E</span><div><b>解説と構成が難しい、役に立たない</b><span>浅い、専門用語が多い</span></div></div><div class="card"><span class="cnum">F</span><div><b>テキスト解説の興味づけが弱い</b><span>フックが弱い</span></div></div><div class="card"><span class="cnum">G</span><div><b>タップさせる仕掛けが少ない</b><span>ここを改善すると伸びる</span></div></div></div>
+<p>これら7つを全部クリアすれば、全くリアクションが得られない、ということがなくなります。</p>
+<p>ご安心ください。</p>
+<p>その中で、最も認知が増えない典型的なミスがあります。</p>
+<aside class="callout"><div class="co-label">【最も認知が増えない共通点】</div><p>AIイラスト感丸わかりで、統一感がバラバラの微妙なデザイン</p><p>もしくは、誰も興味が持てない、需要が少なくフックが弱いメディア投稿</p></aside>
+<p class="big">特にこの2つだけは必ず見直す。<b class="rd">デザイン性が弱い</b>ものと、<b class="rd">興味が弱い</b>ものは避ける</p>
+<p>これを理解した上で、7つの原因をAから順番に深掘りしていきましょう。</p>
+<button class="next" type="button" data-go="c6"><span>次の章 ▶</span><b>メディアA　AI感丸出しのフォントとデザイン</b></button>
+</section>
+<section class="chap" id="c6" data-title="メディアA　AI感丸出しのフォントとデザイン">
+<header class="chead"><span class="eyebrow">CHAPTER 06</span><h2>メディアA　AI感丸出しのフォントとデザイン</h2></header>
+<p>Aは、AI感丸出しのフォントやデザインです。ChatGPTのデフォルトのイラストやデザインを、そのまま使っているのが問題なんです。</p>
+<p>例えばこんな感じの図解をしている人、多くないですか。「もうAI丸出しじゃん」「デフォルトのまんまじゃん」という見た目です。</p>
+<p>カラフルすぎて、ChatGPTのデフォルト感が出てしまいます。</p>
+<p>こうなると、あまり伸びません。さらに大事なことを言います。</p>
+<p class="big"><mark class="mk">カラフルすぎる色とデザイン</mark>は、<b class="rd">インプが下がる</b></p>
+<p>やっていくと分かると思いますが、カラフルだとあまり伸びません。</p>
+<p>だから、<mark class="mk">AIっぽくない適度な手書き感とクリエイティブさ</mark>をつけて、なおかつデザインを統一してみてください。</p>
+<h3 id="c6-1" data-sub="伸びやすい図解の例">伸びやすい図解の例</h3>
+<p>僕の例を出します。</p>
+<p>▶ 「教材レベルの分かりやすいClaudeの完全解説を作りました」という内容で、世界観を毎回説明しなくていい、という大きめのフックを置く。</p>
+<p>AI感がちょっとない仕上がりにする</p>
+<p>▶ 複数作業をさせるデスクトップ自動化、クローンや分身、型の関数化など。デザインが統一されていて、とても見やすく、手書き感もある</p>
+<p>▶ AI社員を作る手順で、自分のパソコンのデスクトップ画面を表示したり、ロゴ付きにしたり、枠を付け加えたりする</p>
+<p>▶ カメラワークを、時系列で手順ごとにまとめて、ビフォーアフターを見せる</p>
+<p>▶ ChatGPTの時短コマンドを、全て統一したデザインで作る。保存しやすいので、伸びやすい</p>
+<p>▶ Notion MCPやCanva MCPなど、MCPというテーマで、それぞれのやり方や手順を解説する。</p>
+<p>デザインが統一されている</p>
+<p>このように、フォントやデザインをあえて工夫しています。タイトルも見やすく、全体的に統一感がありますよね。</p>
+<p>この色彩や見た目を変えるだけでも、伸び方が全然違います。</p>
+<h3 id="c6-2" data-sub="ChatGPTで図解を作る時のキーワード">ChatGPTで図解を作る時のキーワード</h3>
+<p>どうやって作るのかというと、ある程度キーワードを入れていきましょう。</p>
+<aside class="callout"><div class="co-label">【プロンプトに入れるキーワード】</div><p>手書き風スタイルで</p><p>色は派手すぎず、統一感があるように</p><p>矢印、枠、関連素材、具体例をつけて</p></aside>
+<p>このようにして、いつもの画像生成に一味加えます。だから、プロンプトを工夫しなければいけません。</p>
+<button class="next" type="button" data-go="c7"><span>次の章 ▶</span><b>メディアB　画像の両端が見切れる</b></button>
+</section>
+<section class="chap" id="c7" data-title="メディアB　画像の両端が見切れる">
+<header class="chead"><span class="eyebrow">CHAPTER 07</span><h2>メディアB　画像の両端が見切れる</h2></header>
+<p>Bは、画像の両端が見切れて見づらいことです。上のタイトルが見えなかったり、途中で画像が消えていたりすること、よくあります。</p>
+<p>2枚目の画像が切れるのは、Threadsのあえてインプが伸びやすい時の投稿にはなります。でも、上や下のタイトルが切れているのは結構あるんですよね。</p>
+<p>複数枚を同時に上げると、投稿した時にサイズが変わったりするので注意してください。</p>
+<h3 id="c7-1" data-sub="見切れ対策">見切れ対策</h3>
+<p>▶ AIで画像を作る時に、画像の安全マージンを確保する▶ 例えば、</p>
+<p>上の10%と下の10%は文字を置かない範囲にする▶ もしくは「もう少し中央に全体を寄せてください」と指示する</p>
+<p>マージンを設定するだけで、解決します。</p>
+<button class="next" type="button" data-go="c8"><span>次の章 ▶</span><b>メディアC　色やデザインがバラバラ</b></button>
+</section>
+<section class="chap" id="c8" data-title="メディアC　色やデザインがバラバラ">
+<header class="chead"><span class="eyebrow">CHAPTER 08</span><h2>メディアC　色やデザインがバラバラ</h2></header>
+<p>Cは、色やデザインがバラバラで、統一感がないことです。</p>
+<p>色が派手すぎるだけでなく、デザインがバラバラすぎて、1枚目と2枚目が全く違う雰囲気だと、バズりません。</p>
+<p>タイムラインに表示された時に、複数のメディアがパッと見て統一されているようにしてください。</p>
+<aside class="callout"><div class="co-label">【NG例】</div><p>1枚目は明朝体で高級感がある画像、2枚目はゴシック体で可愛い画像</p></aside>
+<p>こうなると、メディア投稿は伸びません。タップされる確率が低くなるからです。バラバラのデザインで、いいねが多い投稿を、あまり見たことがないと思います。</p>
+<p class="big"><mark class="mk">デザインを統一する</mark></p>
+<button class="next" type="button" data-go="c9"><span>次の章 ▶</span><b>メディアD　単純に需要が少ない</b></button>
+</section>
+<section class="chap" id="c9" data-title="メディアD　単純に需要が少ない">
+<header class="chead"><span class="eyebrow">CHAPTER 09</span><h2>メディアD　単純に需要が少ない</h2></header>
+<p>Dは、単純に需要が少ない画像や動画を作っているパターンです。</p>
+<p>需要がなければ、どれだけ改善しても、どれだけ内容が良くても、振り向かれません。</p>
+<p>例えば「好きな男性を落とすテクニック」と「長期的に良い人間関係を作る方法」が同時に出てきたら、需要があるのは、</p>
+<p>好きな男性の落とし方の恋愛テクニックの方ですよね。</p>
+<p class="big">投稿のテーマは、<b class="rd">自分が好きな分野</b>で作らない。周りからの反応が期待されるネタにする</p>
+<p>この場合は、リサーチするか、AIで需要があるネタをもらって、回答してみてください。リサーチしてもいいし、AIで需要があるものを調べてもいいです。</p>
+<button class="next" type="button" data-go="c10"><span>次の章 ▶</span><b>メディアE　解説と構成が難しい、役に立たない</b></button>
+</section>
+<section class="chap" id="c10" data-title="メディアE　解説と構成が難しい、役に立たない">
+<header class="chead"><span class="eyebrow">CHAPTER 10</span><h2>メディアE　解説と構成が難しい、役に立たない</h2></header>
+<p>Eは、解説と構成が難しい、もしくは全く役に立たない投稿です。</p>
+<p>解説の内容が分かりづらかったり、あまりにも浅い内容だったりすると、スクロールされて飛ばされてしまいます。</p>
+<p>専門用語が多すぎても微妙なので、用語解説や関連するサンプルもつけてください。</p>
+<h3 id="c10-1" data-sub="僕の例">僕の例</h3>
+<p>AI社員を作る手順は、結構流行りましたよね。そこで「初心者向け、ClaudeでAI社員を作ってSNS投稿までしてもらう方法」をまとめました。</p>
+<ol class="flow"><li>1枚目はタイトル「AI社員を作る手順」</li><li>2枚目、3枚目は具体的なステップを続ける</li><li>イラスト、手順、ロゴ、操作画面、関連イメージを入れる</li><li>ステップ1「まずClaudeにログインする」からステップ形式で解説</li></ol>
+<p>大事なのは、<mark class="mk">需要があるテーマ</mark>を、<mark class="mk">誰でも使えるほど分かりやすいステップ</mark>やまとめとして伝えることです。</p>
+<h3 id="c10-2" data-sub="それでも迷うなら、まとめリスト">それでも迷うなら、まとめリスト</h3>
+<p>▶ 美容なら「使ってよかった化粧水10選」▶ 心理学なら「メンタルが弱い人が今すぐやる対策まとめ」▶ 旅行なら「九州でカップルが行きたい1万円以下のホテル10選」</p>
+<p>このようなまとめリストを、複数回作っていくと、バズる確率も上がります。</p>
+<button class="next" type="button" data-go="c11"><span>次の章 ▶</span><b>メディアF・G　興味づけが弱い、タップの仕掛けが少ない</b></button>
+</section>
+<section class="chap" id="c11" data-title="メディアF・G　興味づけが弱い、タップの仕掛けが少ない">
+<header class="chead"><span class="eyebrow">CHAPTER 11</span><h2>メディアF・G　興味づけが弱い、タップの仕掛けが少ない</h2></header>
+<h3 id="c11-1" data-sub="F　テキスト解説の興味づけが弱い">F　テキスト解説の興味づけが弱い</h3>
+<p>たまに、動画や画像を見るまでもないような、無駄なテキストを添えてしまっている人がいます。</p>
+<p>ダラダラとテキストで説明すると、画像の意味がなくなってしまいます。</p>
+<p>1行から2行ぐらいで構いません。メディアをタップしたくなるような、短期的快楽や気になるストーリーを意識してください。</p>
+<h3 id="c11-2" data-sub="G　タップさせる仕掛けが少ない">G　タップさせる仕掛けが少ない</h3>
+<p>少しだけ上級テクニックです。いい画像やいい動画を投稿するだけでは、意味がありません。</p>
+<ol class="flow"><li>気になるタイトルをつける</li><li>読み進めたくなるストーリーや構成にする</li><li>コメント欄に「続きは次の投稿で」と書き、プロフィールに飛ばしてアクセスを狙う</li><li>さらにコメント欄で内容を解説する</li></ol>
+<p>一つ一つの小さなところに仕掛けを施して、タップされる可能性や、プロフィールクリックを上げる施策を、工夫してみてください。</p>
+<aside class="callout"><div class="co-label">【例】</div><p>「イケメン男性と付き合った話」よりも「イケメン男性と付き合ったら…part2」の方がいい</p><p>次の投稿が見たくなり、part3を期待させることもできる</p></aside>
+<p>メディア投稿が伸びない原因はたくさんあります。修正できるところは、すぐ修正していきましょう。</p>
+<p>以上、原因②のメディア投稿が雑、の解説でした。</p>
+<button class="next" type="button" data-go="c12"><span>次の章 ▶</span><b>初心者編③　ベネフィットと損失回避が弱い</b></button>
+</section>
+<section class="chap" id="c12" data-title="初心者編③　ベネフィットと損失回避が弱い">
+<header class="chead"><span class="eyebrow">CHAPTER 12</span><h2>初心者編③　ベネフィットと損失回避が弱い</h2></header>
+<p>三つ目は、ベネフィットと損失回避が弱いことです。</p>
+<p>ベネフィットが弱いと、インプレッションが伸びません。当たり障りのないフラットなライティングでは、認知されません。</p>
+<p class="big">インプレッションが増えるのは、<mark class="mk">人生に影響を及ぼすほどの利益</mark>か、<mark class="mk">危機感がある表現</mark></p>
+<p>この投稿を見た時に、その人にとって、すぐ利益になるものか、見ないと損すると思うような投稿が好まれます。</p>
+<h3 id="c12-1" data-sub="伸びやすいフレーズの例">伸びやすいフレーズの例</h3>
+<p>▶ 誰も教えてくれないけど▶ 実は○○をすると、肌が10歳若返る▶ 怒られるかもしれないけど、全部言えます▶ その○○は、</p>
+<p>今すぐやめてください▶ 1日たった3分でできる○○対策▶ 消すかもしれないので、先にこれ見ておいてください▶ まだ○○している人、かなり危ない</p>
+<p>得られる未来や、失った時の後悔を、一言でいいのでイメージさせてください。</p>
+<h3 id="c12-2" data-sub="長いクッション言葉は避ける">長いクッション言葉は避ける</h3>
+<p>優しい人によくあるのが「〇〇かもしれませんので、よかったら見てください」のような、謎に長いクッション言葉です。</p>
+<p>これだと全然伸びません。</p>
+<p>認知を増やす時は、言い切ることが大事です。</p>
+<aside class="callout"><div class="co-label">【避ける表現】</div><p>多分、おそらく、〇〇の可能性があります、もしかすると</p></aside>
+<p>人は、正しいことを控えめに言う人よりも、間違ったことでも堂々と言える人についていきます。これは<span class="bg">自尊心仮説</span>という心理から成り立っています。</p>
+<p>自信がない人や、その分野でよくわからない人よりも、自信に満ち溢れている人の話を受け取りやすい、ということです。</p>
+<p>全く同じ内容を話す人が2人いて、Aさんは断定口調、Bさんは控えめな口調なら、ほとんどの人はAさんの言い切りの投稿を見ます。</p>
+<p>間違っていても、後で補足や修正をすればいいので、自信を持って堂々と発言してください。</p>
+<p>コンテンツ販売をする以上、曖昧な人からのコンテンツは買われません。</p>
+<h3 id="c12-3" data-sub="シビアなジャンルの注意点">シビアなジャンルの注意点</h3>
+<p>内容的にシビアで難しいジャンルもあります。その場合は、コメント欄に補足説明を付け足せば大丈夫です。</p>
+<aside class="callout"><div class="co-label">【コメント欄の補足例】</div><p>個人差が大きいこともあります</p><p>○○の場合は、医師に相談してみてください</p></aside>
+<p>あまり断定的にやると、法律的に問われることもあるので注意してください。</p>
+<button class="next" type="button" data-go="c13"><span>次の章 ▶</span><b>初心者編④　テーマがバラバラ</b></button>
+</section>
+<section class="chap" id="c13" data-title="初心者編④　テーマがバラバラ">
+<header class="chead"><span class="eyebrow">CHAPTER 13</span><h2>初心者編④　テーマがバラバラ</h2></header>
+<p>四つ目は、テーマがバラバラなことです。初心者によくありがちで、気づきにくい失敗です。</p>
+<p>いつも投稿内容やコンセプトが違うと、あまりバズりません。1つ前の投稿は日常生活、今はAIの情報、次の投稿は旅行の情報。</p>
+<p>このようにバラバラのジャンルやテーマで投稿している人も結構います。</p>
+<p class="big"><mark class="mk">プロミスがバラバラ</mark>になることだけは避ける</p>
+<p>理由は単純で、フォロワーがあなたの投稿を見なくなるからです。</p>
+<p>例えば、1時間前にAIの情報がためになると思って、あなたのプロフィールに行ったら、次の投稿が旅行だった場合、幻滅しませんか。</p>
+<p>通知を外されかねません。</p>
+<p>さらに「この投稿に興味がない」のボタンを押されて、その人にあなたの投稿が表示されなくなってしまいます。</p>
+<p>一番の問題は、<mark class="mk">テーマが一貫していない投稿でバズると、商品も買われない</mark>ことです。</p>
+<p>AIの発信で伸びたのに、プロフィールに化粧品のPR案件があったら、おかしいですよね。</p>
+<p>一貫していない投稿でバズって失うのは、インプレッションではありません。</p>
+<p>それよりも、<b class="rd">売上</b>です。</p>
+<p>売上は減る量が大きいので、これだけは注意してください。</p>
+<button class="next" type="button" data-go="c14"><span>次の章 ▶</span><b>初心者編⑤　1回試してやめている</b></button>
+</section>
+<section class="chap" id="c14" data-title="初心者編⑤　1回試してやめている">
+<header class="chead"><span class="eyebrow">CHAPTER 14</span><h2>初心者編⑤　1回試してやめている</h2></header>
+<p>五つ目は、1回試してやめているから、インプレッションが伸びないことです。</p>
+<p>同じ投稿でも、日によって伸び方が変わります。それなのに、1回の結果で型を捨てたり、その型に挑戦しなくなったりする人がいます。</p>
+<p>これは、単純にマインドセットの問題です。</p>
+<p>特にThreadsは、全く同じ内容、全く同じ画像でも、数日後に爆発的に伸びることがあります。</p>
+<p>だから、テスト回数を増やしてください。</p>
+<p class="big">再現性の高い成果は、<b class="rd">100発100中</b>ではない</p>
+<p>100発やって、50回当たる、80回当たる、というものです。2回目や3回目にやった方がバズることもあります。</p>
+<p>諦めるのが早いんですよね。</p>
+<button class="next" type="button" data-go="c15"><span>次の章 ▶</span><b>初心者編⑥　文章がやたらと縦に長い</b></button>
+</section>
+<section class="chap" id="c15" data-title="初心者編⑥　文章がやたらと縦に長い">
+<header class="chead"><span class="eyebrow">CHAPTER 15</span><h2>初心者編⑥　文章がやたらと縦に長い</h2></header>
+<p>六つ目は、文章がやたらと縦に長い投稿です。ThreadsやX特有の伸び方ですが、全く同じ文章でも、改行の多さはインプレッションを下げやすいです。</p>
+<p>ずっと改行して、だらだら長く書いている人でも、たまにバズります。でも、すごくライティング力がいるので、避けてください。</p>
+<h3 id="c15-1" data-sub="サンプルAとサンプルB">サンプルAとサンプルB</h3>
+<aside class="callout"><div class="co-label">【サンプルA　伸びる】</div><p>速報ですが、無印良品で個人情報が流出しました</p><p>なんと、MUJIカードのクレジットカード番号が109万件漏れた</p><p>こんな時にも、GeminiのAIを使っていろんな対策やチェックができるので、やり方をまとめてみました</p></aside>
+<p>悪いパターンは、やたら長い文章で、改行がめちゃくちゃ多く、読みづらいものです。情報量も1投稿目からすごく多く、何を伝えたいのか分かりません。</p>
+<p>この場合、サンプルBの方が再生数が増えず、サンプルAの方が再生数が増えます。</p>
+<p>理由は3つあります。</p>
+<h3 id="c15-2" data-sub="理由1　一番おいしい部分が画面の外に押し出される">理由1　一番おいしい部分が画面の外に押し出される</h3>
+<p>改行すると、タイムラインに見えるのは最初の数行だけです。それ以降は「もっと見る」の奥に隠れたり、長くスクロールしないといけなかったりします。</p>
+<p>サンプルBは、改行と空白の行で行数を使い切るので、肝心の「コメント欄に5つ対策をまとめました」が、見える範囲に入らないことがあります。</p>
+<p>後半を見させたいのに、見切れてしまったらもったいないですよね。これだと、ただのニュース速報に見えて、スクロールされます。</p>
+<p>サンプルAは、同じ文字数でも「流出」と「対策を5つまとめた」が、同じ画面内に収まっています。</p>
+<p>タップしなくても、だいたい気になりますよね。危機感と得られるものが一目で両方入るので、タップする理由が生まれます。</p>
+<p>そこで続きをコメント欄で書いてください。</p>
+<p>Webの世界では、スクロールせずに見える範囲を<span class="bg">ファーストビュー</span>と言います。</p>
+<p>視線統計の調査などでも、人の注意は画面の上の方に大きく偏ると報告されています。</p>
+<p>注目させたいなら、あえて凝縮して、ファーストビューをクリアしてください。</p>
+<h3 id="c15-3" data-sub="理由2　読む前に長そうと判断される">理由2　読む前に長そうと判断される</h3>
+<p>縦長の長い投稿は、読まれません。人は、文章を読む前に、まず見た目の量で読むかどうかを決めています。</p>
+<p>人間は、できるだけ頭を使わずに済ませようとする、<span class="bg">認知的倹約家</span>という性質があります。</p>
+<p>同じ文字数でも、縦に長いだけで、読むのに時間がかかりそうと見積もられて、読む前に流されます。</p>
+<p>関連する研究もあります。</p>
+<p>同じ内容の説明書を、読みにくい書体に見せただけで、参加者は「この作業は時間がかかりそう」「ストレスがかかりそう」と感じました。</p>
+<p>中身が同じでも、見た目の負担が、そのまま内容の負担として受け取られることがあります。これを<span class="bg">認知的流暢性</span>、または<span class="bg">処理流暢性</span>と言います。</p>
+<p>良かれと思ってたくさん改行すると、余計にストレスがかかると思ってください。</p>
+<h3 id="c15-4" data-sub="理由3　目の動きが増えて読むのが遅くなる">理由3　目の動きが増えて読むのが遅くなる</h3>
+<p>文章を読む時、目は滑らかに動いていません。止まって読んで、次へ飛びます。この小さなジャンプを<span class="bg">サッカード</span>と呼びます。</p>
+<p>行の終わりから次の行の頭に戻る動きは、その中でも距離が長いジャンプです。改行が増えるほど、この戻りの動きが増えます。</p>
+<p>空白が多ければ多いほど、何回も距離を飛ばないといけません。</p>
+<p>1行なら気にならなくても、脳はなんとなく、読みにくいと感じ取り始めます。</p>
+<aside class="callout"><div class="co-label">【ここまでの解説が難しくても大丈夫です】</div><p>1投稿目は改行しない方が伸びる</p><p>改行して丁寧に説明するなら、コメント欄に続きを作って、ツリー状に書く</p><p>その方がインプレッションが高くなる</p></aside>
+<button class="next" type="button" data-go="c16"><span>次の章 ▶</span><b>初心者編⑦　単純に読む価値がない</b></button>
+</section>
+<section class="chap" id="c16" data-title="初心者編⑦　単純に読む価値がない">
+<header class="chead"><span class="eyebrow">CHAPTER 16</span><h2>初心者編⑦　単純に読む価値がない</h2></header>
+<p>七つ目は、単純に読む価値がないことです。いろいろなテクニックの前に、読む価値があって、気になる内容にするかどうかが大切です。</p>
+<p>▶ トレンドや話題が、すでに過ぎ去っている▶ みんなと全く同じ内容のフック▶ 最初の一行で、読む気が失せるフック</p>
+<p>こういうことをすると、タップされるどころか、スクロールされてしまいます。</p>
+<p>その市場で伸びるテーマかどうかを見極めるには、リサーチを重ねるか、AIで顧客の緊急性や悩みの深いテーマを見つけると、すぐに解決します。</p>
+<button class="next" type="button" data-go="c17"><span>次の章 ▶</span><b>上級者編①　Threads上の規制がかかる</b></button>
+</section>
+<section class="chap" id="c17" data-title="上級者編①　Threads上の規制がかかる">
+<header class="chead"><span class="eyebrow">CHAPTER 17</span><h2>上級者編①　Threads上の規制がかかる</h2></header>
+<p>ここから先は、少し上のステージの話です。上級者、中級者の方は見てみてください。</p>
+<p>上級者でも、インプレッションが急激に下がることは全然あります。今回は4つに絞ってお話しします。</p>
+<p>上級者編の一つ目は、Threads上の規制がかかることで、これが一番多いです。</p>
+<p>ThreadsやInstagramを開くと「アカウント制限がかかりました」という警告が来ることがあります。</p>
+<p>どれだけまともな投稿を作っても、システム上「詐欺を含む可能性があります」と誤認識されるケースです。</p>
+<p>どれだけ良い投稿をしても、嫌がらせや同業者の嫉妬によって、アカウント報告されてしまうこともあります。</p>
+<p>影響力がありすぎると、逆に引っかかりやすい。</p>
+<p>ハンデのようなものです。</p>
+<h3 id="c17-1" data-sub="シャドーバン気味の状態">シャドーバン気味の状態</h3>
+<p>単純なシャドーバンもあります。規制の通知は来ないのに、表示だけが静かに絞られて、数回表示ぐらいしかされない時もあります。</p>
+<p>たまに表示回数が2桁、なんてこともあるので、よく見ておきましょう。</p>
+<aside class="callout"><div class="co-label">【対策】</div><p>Meta社に審査をリクエストする</p><p>数日間様子を見て、休ませる</p></aside>
+<button class="next" type="button" data-go="c18"><span>次の章 ▶</span><b>上級者編②　内容が高度になりすぎる</b></button>
+</section>
+<section class="chap" id="c18" data-title="上級者編②　内容が高度になりすぎる">
+<header class="chead"><span class="eyebrow">CHAPTER 18</span><h2>上級者編②　内容が高度になりすぎる</h2></header>
+<p>二つ目は、内容が高度になりすぎて、新しい層や新しい見込み客がついていけなくなることです。</p>
+<p>内容のレベルが高すぎると、フォロワーが閲覧しません。</p>
+<p>特にThreadsは、Xよりも知識がそれほど多くない方が多いので、専門用語を使いすぎると、離脱されてしまいます。</p>
+<p class="big"><mark class="mk">知っている内容7割</mark>、<mark class="mk">知らない内容2〜3割</mark>がちょうどいい</p>
+<p>マーケティングの世界では、こう言われています。初心者や一般的に知られている内容が7割ぐらいが、一番いいです。</p>
+<button class="next" type="button" data-go="c19"><span>次の章 ▶</span><b>上級者編③　競合や真似するアカウントが増える</b></button>
+</section>
+<section class="chap" id="c19" data-title="上級者編③　競合や真似するアカウントが増える">
+<header class="chead"><span class="eyebrow">CHAPTER 19</span><h2>上級者編③　競合や真似するアカウントが増える</h2></header>
+<p>三つ目は、競合や真似するアカウントが増えて、差別化できなくなるパターンです。</p>
+<p>例えば、レオがThreadsで一番最初にAI発信をしましたが、皆さん知っての通り、AI発信者ばかりになりました。</p>
+<p>その頃に比べると、同じくらい有料級の価値があっても、インプレッションが下がります。真似する人が増えるので、やっぱり下がっていくんですよね。</p>
+<p>こればかりは、常に斬新な切り口や、マーケティングの変化を取り入れていかないといけません。</p>
+<button class="next" type="button" data-go="c20"><span>次の章 ▶</span><b>上級者編④　初速を作るコアファンが減る</b></button>
+</section>
+<section class="chap" id="c20" data-title="上級者編④　初速を作るコアファンが減る">
+<header class="chead"><span class="eyebrow">CHAPTER 20</span><h2>上級者編④　初速を作るコアファンが減る</h2></header>
+<p>最後の四つ目は、初速を作ってくれるコアファンが離れた、もしくは減っていったパターンです。</p>
+<p>InstagramやTikTokは、初速がそれほど関係ありません。関係はありますが、3日後に急激にバズることもあります。</p>
+<p>ただ、XやThreadsは、基本的に24時間の短期集中型です。投稿から数時間でどのくらい見られたかが大事になります。</p>
+<p>つまり、これまで通知オンにしてくれていたフォロワーが、何らかの理由でいなくなった場合、インプレッションは増えません。</p>
+<p>これは発信者側で調整できないことも多く、フォロワーの私生活やプライベートでも左右されます。</p>
+<p>数万フォロワーがいるのにインプレッションが増えない人は、1年間ずっとThreadsを開いている人が、ほぼ去ったと捉えられます。</p>
+<p>3年間くらい同じSNSを使っていたら、フォロワーさんも同じSNSをずっとは使わないので、ほとんど見られなくなります。</p>
+<p>もちろん、それだけが理由ではありません。</p>
+<p>あくまで原因の一つです。</p>
+<p>自分ではなく、フォロワーさんや市場の動きによって変わる、ということです。</p>
+<p class="big"><mark class="mk">コアファン以外</mark>の人を獲得し、常に<b class="rd">他の人に届ける工夫</b>をする</p>
+<p>そのために、僕たちはアイデアを練り続けないといけません。</p>
+<button class="next" type="button" data-go="c21"><span>次の章 ▶</span><b>まとめ　改善を伴った継続</b></button>
+</section>
+<section class="chap" id="c21" data-title="まとめ　改善を伴った継続">
+<header class="chead"><span class="eyebrow">CHAPTER 21</span><h2>まとめ　改善を伴った継続</h2></header>
+<p>原因はたくさんあるので、当てはまる部分は必ず改善しましょう。初心者編は7つ、上級者編は4つのテーマでした。</p>
+<p>これらの原因を全部対策すれば、全然伸びない、ということはなくなっていきます。</p>
+<p class="big">認知を増やし続けるのに必要なのは、継続ではなく、<mark class="mk">改善を伴った継続</mark></p>
+<p>前進にならない習慣は、衰退と同じです。伸びない理由を調べるのも、原因を追求するのも、結果を変えられるのも、すべて自分次第です。</p>
+<p>ただ、アカウント制限は別です。どれだけ頑張っても、逆効果になることもあります。</p>
+<p>また、閲覧数だけを追ってフォロワーが増えても、売上が増えなければ、ビジネス上の意味がありません。</p>
+<p>見込み客もちゃんと増やしていってください。</p>
+<aside class="callout"><div class="co-label">【次回予告】</div><p>この章が理解できたら、次は集客編です。リードの増やし方について話しましょう。リードとは、見込み客のことですね。次回の動画でお会いしましょう。</p></aside>
+</section>
+
+  <div class="end">
+    <button class="tbtn" type="button" id="openToc2">目次を開く</button>
+    <button class="tbtn" type="button" id="toTop2">▲ 最初に戻る</button>
+  </div>
+</main>
+
+<div class="ov" id="ov"></div>
+<aside class="drawer" id="drawer" aria-label="章の一覧" aria-hidden="true">
+  <div class="d-head"><b>【目次】</b><button class="tbtn" type="button" id="closeToc" aria-label="閉じる">閉じる</button></div>
+  <div class="d-body"><ul>
+<li data-ch="c1"><button type="button" class="chb" data-go="c1"><span class="tn">01</span><span class="tt">はじめに　第3弾はバズらない時の対策編</span></button></li>
+<li data-ch="c2"><button type="button" class="chb" data-go="c2"><span class="tn">02</span><span class="tt">原因は初心者編7つと上級者編4つ</span></button></li>
+<li data-ch="c3"><button type="button" class="chb" data-go="c3"><span class="tn">03</span><span class="tt">初心者編①　丁寧語が多すぎる教科書レベルの興味づけ</span></button><ul class="subs"><li><button type="button" class="sub" data-go="c3-1">友達におすすめするスタイル</button></li><li><button type="button" class="sub" data-go="c3-2">サンプル1　化粧水のアフィリエイト</button></li><li><button type="button" class="sub" data-go="c3-3">サンプル2　AIツールの紹介</button></li><li><button type="button" class="sub" data-go="c3-4">サンプル3　ホテルの紹介</button></li></ul></li>
+<li data-ch="c4"><button type="button" class="chb" data-go="c4"><span class="tn">04</span><span class="tt">名詞的語尾×丁寧語×友達言葉の3点セット</span></button><ul class="subs"><li><button type="button" class="sub" data-go="c4-1">3つの役割</button></li><li><button type="button" class="sub" data-go="c4-2">名詞的語尾</button></li><li><button type="button" class="sub" data-go="c4-3">丁寧語</button></li><li><button type="button" class="sub" data-go="c4-4">友達言葉</button></li><li><button type="button" class="sub" data-go="c4-5">3つのサンプルを書き直すと</button></li></ul></li>
+<li data-ch="c5"><button type="button" class="chb" data-go="c5"><span class="tn">05</span><span class="tt">初心者編②　メディア投稿が雑</span></button></li>
+<li data-ch="c6"><button type="button" class="chb" data-go="c6"><span class="tn">06</span><span class="tt">メディアA　AI感丸出しのフォントとデザイン</span></button><ul class="subs"><li><button type="button" class="sub" data-go="c6-1">伸びやすい図解の例</button></li><li><button type="button" class="sub" data-go="c6-2">ChatGPTで図解を作る時のキーワード</button></li></ul></li>
+<li data-ch="c7"><button type="button" class="chb" data-go="c7"><span class="tn">07</span><span class="tt">メディアB　画像の両端が見切れる</span></button><ul class="subs"><li><button type="button" class="sub" data-go="c7-1">見切れ対策</button></li></ul></li>
+<li data-ch="c8"><button type="button" class="chb" data-go="c8"><span class="tn">08</span><span class="tt">メディアC　色やデザインがバラバラ</span></button></li>
+<li data-ch="c9"><button type="button" class="chb" data-go="c9"><span class="tn">09</span><span class="tt">メディアD　単純に需要が少ない</span></button></li>
+<li data-ch="c10"><button type="button" class="chb" data-go="c10"><span class="tn">10</span><span class="tt">メディアE　解説と構成が難しい、役に立たない</span></button><ul class="subs"><li><button type="button" class="sub" data-go="c10-1">僕の例</button></li><li><button type="button" class="sub" data-go="c10-2">それでも迷うなら、まとめリスト</button></li></ul></li>
+<li data-ch="c11"><button type="button" class="chb" data-go="c11"><span class="tn">11</span><span class="tt">メディアF・G　興味づけが弱い、タップの仕掛けが少ない</span></button><ul class="subs"><li><button type="button" class="sub" data-go="c11-1">F　テキスト解説の興味づけが弱い</button></li><li><button type="button" class="sub" data-go="c11-2">G　タップさせる仕掛けが少ない</button></li></ul></li>
+<li data-ch="c12"><button type="button" class="chb" data-go="c12"><span class="tn">12</span><span class="tt">初心者編③　ベネフィットと損失回避が弱い</span></button><ul class="subs"><li><button type="button" class="sub" data-go="c12-1">伸びやすいフレーズの例</button></li><li><button type="button" class="sub" data-go="c12-2">長いクッション言葉は避ける</button></li><li><button type="button" class="sub" data-go="c12-3">シビアなジャンルの注意点</button></li></ul></li>
+<li data-ch="c13"><button type="button" class="chb" data-go="c13"><span class="tn">13</span><span class="tt">初心者編④　テーマがバラバラ</span></button></li>
+<li data-ch="c14"><button type="button" class="chb" data-go="c14"><span class="tn">14</span><span class="tt">初心者編⑤　1回試してやめている</span></button></li>
+<li data-ch="c15"><button type="button" class="chb" data-go="c15"><span class="tn">15</span><span class="tt">初心者編⑥　文章がやたらと縦に長い</span></button><ul class="subs"><li><button type="button" class="sub" data-go="c15-1">サンプルAとサンプルB</button></li><li><button type="button" class="sub" data-go="c15-2">理由1　一番おいしい部分が画面の外に押し出される</button></li><li><button type="button" class="sub" data-go="c15-3">理由2　読む前に長そうと判断される</button></li><li><button type="button" class="sub" data-go="c15-4">理由3　目の動きが増えて読むのが遅くなる</button></li></ul></li>
+<li data-ch="c16"><button type="button" class="chb" data-go="c16"><span class="tn">16</span><span class="tt">初心者編⑦　単純に読む価値がない</span></button></li>
+<li data-ch="c17"><button type="button" class="chb" data-go="c17"><span class="tn">17</span><span class="tt">上級者編①　Threads上の規制がかかる</span></button><ul class="subs"><li><button type="button" class="sub" data-go="c17-1">シャドーバン気味の状態</button></li></ul></li>
+<li data-ch="c18"><button type="button" class="chb" data-go="c18"><span class="tn">18</span><span class="tt">上級者編②　内容が高度になりすぎる</span></button></li>
+<li data-ch="c19"><button type="button" class="chb" data-go="c19"><span class="tn">19</span><span class="tt">上級者編③　競合や真似するアカウントが増える</span></button></li>
+<li data-ch="c20"><button type="button" class="chb" data-go="c20"><span class="tn">20</span><span class="tt">上級者編④　初速を作るコアファンが減る</span></button></li>
+<li data-ch="c21"><button type="button" class="chb" data-go="c21"><span class="tn">21</span><span class="tt">まとめ　改善を伴った継続</span></button></li>
+  </ul></div>
+</aside>
+
+<button class="fab" type="button" id="fab" aria-label="ページの先頭へ"><svg viewBox="0 0 20 20"><path d="M10 16V4M4.5 9.5 10 4l5.5 5.5"/></svg></button>
+<div class="resume" id="resume" role="status"><p id="resumeTxt"></p><div><button type="button" id="resumeNo">最初から読む</button><button type="button" class="pri" id="resumeYes">続きから読む</button></div></div>
+
+<script>
+(function(){
+  var MIN=22;
+  var root=document.documentElement;
+  var $=function(id){return document.getElementById(id)};
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+
+  /* font size */
+  var sizes=[14.5,16.5,18.5,20.5];var si=1;
+  var ss=parseInt(store('cs-fs'),10);if(ss>=0&&ss<sizes.length)si=ss;
+  function applyFs(){root.style.setProperty('--fs',sizes[si]+'px');store('cs-fs',String(si))}
+  applyFs();
+  $('fsDown').addEventListener('click',function(){if(si>0){si--;applyFs()}});
+  $('fsUp').addEventListener('click',function(){if(si<sizes.length-1){si++;applyFs()}});
+
+  /* header height */
+  var top=$('top');
+  function setHH(){root.style.setProperty('--hh',top.offsetHeight+'px')}
+  setHH();window.addEventListener('resize',setHH);
+
+  /* smooth jump */
+  function go(id){
+    var el=$(id);if(!el)return;
+    closeDrawer();
+    var sat=parseFloat(getComputedStyle(root).paddingTop)||0;
+    var y=el.getBoundingClientRect().top+window.pageYOffset-top.offsetHeight-sat-6;
+    window.scrollTo({top:Math.max(0,y),behavior:reduce?'auto':'smooth'});
+  }
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('[data-go]');
+    if(b){go(b.getAttribute('data-go'))}
+  });
+
+  /* drawer */
+  var drawer=$('drawer'),ov=$('ov');
+  function openDrawer(){drawer.classList.add('on');ov.classList.add('on');drawer.setAttribute('aria-hidden','false');
+    var a=drawer.querySelector('li.active');if(a&&a.scrollIntoView){a.scrollIntoView({block:'center'})}}
+  function closeDrawer(){drawer.classList.remove('on');ov.classList.remove('on');drawer.setAttribute('aria-hidden','true')}
+  $('openToc').addEventListener('click',openDrawer);
+  $('openToc2').addEventListener('click',openDrawer);
+  $('closeToc').addEventListener('click',closeDrawer);
+  ov.addEventListener('click',closeDrawer);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeDrawer()});
+  function toTop(){window.scrollTo({top:0,behavior:reduce?'auto':'smooth'})}
+  $('fab').addEventListener('click',toTop);
+  $('toTop2').addEventListener('click',toTop);
+
+  /* scroll spy + progress */
+  var chaps=[].slice.call(document.querySelectorAll('.chap'));
+  var lis=[].slice.call(document.querySelectorAll('#drawer li[data-ch]'));
+  var barFill=$('barFill'),nowTitle=$('nowTitle'),nowSub=$('nowSub'),fab=$('fab');
+  var lastIdx=-2,ticking=false,saveT=null;
+  function curIndex(){
+    var line=top.offsetHeight+80,idx=-1;
+    for(var i=0;i<chaps.length;i++){if(chaps[i].getBoundingClientRect().top<=line)idx=i;else break}
+    return idx;
+  }
+  function update(){
+    ticking=false;
+    var y=window.pageYOffset,max=Math.max(1,document.documentElement.scrollHeight-window.innerHeight);
+    var p=Math.min(1,Math.max(0,y/max));
+    barFill.style.transform='scaleX('+p.toFixed(4)+')';
+    var rem=Math.max(0,Math.ceil(MIN*(1-p)));
+    var idx=curIndex();
+    nowSub.textContent=(idx>=0?'第'+(idx+1)+'章・':'')+Math.round(p*100)+'%・'+(rem>0?'残り約'+rem+'分':'読了');
+    if(idx!==lastIdx){
+      lastIdx=idx;
+      nowTitle.textContent=idx>=0?chaps[idx].getAttribute('data-title'):'Threads集客のリーチ編 第3弾';
+      lis.forEach(function(li,i){li.classList.toggle('active',i===idx)});
+    }
+    fab.classList.toggle('on',y>700);
+    clearTimeout(saveT);saveT=setTimeout(function(){store('cs4-pos',String(Math.round(y)))},400);
+  }
+  window.addEventListener('scroll',function(){if(!ticking){ticking=true;requestAnimationFrame(update)}},{passive:true});
+  window.addEventListener('resize',update);
+  update();
+
+  /* marker draw-in (visible at rest; only off-screen ones animate in) */
+  var mks=[].slice.call(document.querySelectorAll('.mk'));
+  if('IntersectionObserver' in window&&!reduce){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(en){if(en.isIntersecting){en.target.classList.remove('pend');io.unobserve(en.target)}});
+    },{threshold:0.6});
+    mks.forEach(function(m){if(m.getBoundingClientRect().top>window.innerHeight){m.classList.add('pend');io.observe(m)}});
+  }
+
+  /* resume reading */
+  var saved=parseInt(store('cs4-pos'),10);
+  if(saved>900&&window.pageYOffset<200){
+    var ci=-1;
+    for(var i=0;i<chaps.length;i++){if(chaps[i].getBoundingClientRect().top+window.pageYOffset<=saved+top.offsetHeight+80)ci=i}
+    var r=$('resume');
+    $('resumeTxt').textContent='前回は'+(ci>=0?'第'+(ci+1)+'章「'+chaps[ci].getAttribute('data-title')+'」':'途中')+'まで読んでいました。';
+    setTimeout(function(){r.classList.add('on')},500);
+    var hide=function(){r.classList.remove('on')};
+    var hT=setTimeout(hide,12000);
+    $('resumeYes').addEventListener('click',function(){clearTimeout(hT);hide();window.scrollTo({top:saved,behavior:reduce?'auto':'smooth'})});
+    $('resumeNo').addEventListener('click',function(){clearTimeout(hT);hide()});
+  }
+})();
+</script>
+
+</body>
+</html>
